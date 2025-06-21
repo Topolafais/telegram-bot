@@ -1,6 +1,7 @@
 import telebot
+import os
 
-TOKEN = '8049292626:AAFX7Jlh_hWRAvGgZ_XBJIyaLWm50KPvpk8'
+TOKEN = os.environ.get("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
 BAN_FILE = "ban_reasons.txt"
