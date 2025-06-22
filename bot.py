@@ -7,11 +7,12 @@ bot = telebot.TeleBot(TOKEN)
 BAN_FILE = "ban_reasons.txt"
 WARN_FILE = "warns.txt"
 
-ADMIN_ID_ANI = 5771401595
-ADMIN_ID_DARLIN = 1603464587
+ROONYA = 599492177
+DARLIN = 1603464587
+ADMIN_LIST = [ROONYA, DARLIN, 5771401595]
 
 def is_admin(message):
-    return message.from_user.id in [ADMIN_ID_ANI, ADMIN_ID_DARLIN]
+    return message.from_user.id in ADMIN_LIST
 
 # /start
 @bot.message_handler(commands=['start'])
@@ -24,6 +25,15 @@ def start_message(message):
         "• Подать апелляцию\n"
         "• Связаться с админом\n\n"
         "📋 Все команды: /commandlist"
+    )
+
+@bot.message_handler(commands=['adminlist'])
+def admin_list(message):
+    bot.send_message(message.chat.id, 
+        for i in range(len(ADMIN_LIST))
+        {
+            ADMIN_LIST[i]
+        }
     )
 
 # /commandlist
