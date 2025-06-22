@@ -14,6 +14,49 @@ ADMIN_LIST = [ROONYA, DARLIN, 5771401595]
 def is_admin(message):
     return message.from_user.id in ADMIN_LIST
 
+def is_owner(user_id):
+    return user_id in [ROONYA, DARLIN]
+
+@bot.message_handler(commands=['addadmin'])
+def add_admin(message):
+    if not is_owner(message.from_user.id):
+        bot.send_message(message.chat.id, "❌ У тебя нет прав добавлять админов.")
+        return
+
+    parts = message.text.split()
+    if len(parts) != 2 or not parts[1].isdigit():
+        bot.send_message(message.chat.id, "⚠️ Используй: /addadmin <id>")
+        return
+
+    new_admin_id = int(parts[1])
+    if new_admin_id in ADMIN_LIST:
+        bot.send_message(message.chat.id, "ℹ️ Этот пользователь уже админ.")
+    else:
+        ADMIN_LIST.append(new_admin_id)
+        bot.send_message(message.chat.id, f"✅ Добавлен новый админ: {new_admin_id}")
+
+@bot.message_handler(commands=['deladmin'])
+def del_admin(message):
+    if not is_owner(message.from_user.id):
+        bot.send_message(message.chat.id, "❌ У тебя нет прав удалять админов.")
+        return
+
+    parts = message.text.split()
+    if len(parts) != 2 or not parts[1].isdigit():
+        bot.send_message(message.chat.id, "⚠️ Используй: /deladmin <id>")
+        return
+
+    del_id = int(parts[1])
+    if del_id in [ROONYA, DARLIN]:
+        bot.send_message(message.chat.id, "🚫 Нельзя удалить владельцев.")
+        return
+
+    if del_id in ADMIN_LIST:
+        ADMIN_LIST.remove(del_id)
+        bot.send_message(message.chat.id, f"✅ Админ {del_id} удалён.")
+    else:
+        bot.send_message(message.chat.id, "❌ Этот пользователь не является админом.")
+
 # /start
 @bot.message_handler(commands=['start'])
 def start_message(message):
@@ -29,12 +72,10 @@ def start_message(message):
 
 @bot.message_handler(commands=['adminlist'])
 def admin_list(message):
-    bot.send_message(message.chat.id, 
-        for i in range(len(ADMIN_LIST))
-        {
-            ADMIN_LIST[i]
-        }
-    )
+    admins_text = "👑 Список админов:\n"
+    for admin_id in ADMIN_LIST:
+        admins_text += f"- {admin_id}\n"
+    bot.send_message(message.chat.id, admins_text)
 
 # /commandlist
 @bot.message_handler(commands=['commandlist'])
@@ -51,6 +92,8 @@ def command_list(message):
         "/deleteWarn <ID> — удалить одно предупреждение\n"
         "/clearWarns <ID> — удалить все предупреждения\n"
         "/listWarns — список всех предупреждений"
+        "/addadmin — добавить админа"
+        "/deladmin — удалить админа"
     )
 
 # /id
