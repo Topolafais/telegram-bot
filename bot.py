@@ -91,8 +91,8 @@ def command_list(message):
         "/getWarns <ID> — получить предупреждения\n"
         "/deleteWarn <ID> — удалить одно предупреждение\n"
         "/clearWarns <ID> — удалить все предупреждения\n"
-        "/listWarns — список всех предупреждений"
-        "/addadmin — добавить админа"
+        "/listWarns — список всех предупреждений\n"
+        "/addadmin — добавить админа\n"
         "/deladmin — удалить админа"
     )
 
