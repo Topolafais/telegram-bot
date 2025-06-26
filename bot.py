@@ -6,6 +6,8 @@ bot = telebot.TeleBot(TOKEN)
 
 BAN_FILE = "ban_reasons.txt"
 WARN_FILE = "warns.txt"
+ADMIN_CHAT_FILE = "admin_group.txt"
+user_chat_sessions = {}
 
 ROONYA = 599492177
 DARLIN = 1603464587
@@ -16,6 +18,43 @@ def is_admin(message):
 
 def is_owner(user_id):
     return user_id in [ROONYA, DARLIN]
+
+@bot.message_handler(commands=['группа_админов'])
+def set_admin_group(message):
+    if message.chat.type in ['group', 'supergroup']:
+        with open(ADMIN_CHAT_FILE, "w") as f:
+            f.write(str(message.chat.id))
+        bot.reply_to(message, "✅ Эта группа установлена как группа админов.")
+    else:
+        bot.reply_to(message, "❗ Эту команду нужно использовать в группе, где бот добавлен.")
+
+@bot.message_handler(commands=['обращение_к_администратору'])
+def start_admin_chat(message):
+    try:
+        with open(ADMIN_CHAT_FILE, "r") as f:
+            group_id = int(f.read().strip())
+    except:
+        bot.reply_to(message, "❌ Группа админов не установлена.")
+        return
+
+    user_chat_sessions[message.from_user.id] = group_id
+    bot.send_message(message.chat.id, "📨 Вы начали диалог с админом. Все ваши сообщения будут пересылаться в админскую группу. Напишите /остановить_разговор_с_админом для завершения.")
+
+@bot.message_handler(commands=['остановить_разговор_с_админом'])
+def stop_admin_chat(message):
+    if message.from_user.id in user_chat_sessions:
+        del user_chat_sessions[message.from_user.id]
+        bot.send_message(message.chat.id, "✅ Диалог с админом завершён.")
+    else:
+        bot.send_message(message.chat.id, "ℹ️ У вас нет активного диалога.")
+
+@bot.message_handler(func=lambda message: message.from_user.id in user_chat_sessions)
+def forward_message_to_admin(message):
+    group_id = user_chat_sessions.get(message.from_user.id)
+    if group_id:
+        user_info = f"@{message.from_user.username}" if message.from_user.username else f"ID: {message.from_user.id}"
+        forward_text = f"✉️ Сообщение от {user_info}:\n{message.text}"
+        bot.send_message(group_id, forward_text)
 
 @bot.message_handler(commands=['addadmin'])
 def add_admin(message):
