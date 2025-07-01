@@ -378,7 +378,4 @@ def reply_from_admin(message):
         user_id = admin_message_links[original_msg_id]
         bot.send_message(user_id, f"📬 Ответ от админа:\n{message.text}")
 
-
-
-
 bot.polling()
