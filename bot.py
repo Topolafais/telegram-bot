@@ -346,16 +346,17 @@ def set_admin_group(message):
 def contact_admin(message):
     user_id = message.from_user.id
     if user_id in user_chat_sessions:
-        bot.send_message(message.chat.id, "🔄 Вы уже на связи с админом.")
+        bot.send_message(message.chat.id, "ℹ️ Вы уже на связи с администрацией. Напишите ваше сообщение.")
         return
     try:
         with open(ADMIN_CHAT_FILE, "r", encoding="utf-8") as f:
             admin_chat_id = int(f.read().strip())
         user_chat_sessions[user_id] = admin_chat_id
-        bot.send_message(message.chat.id, "📨 Сообщение администратору отправлено. Напишите, что вас беспокоит.")
-        bot.send_message(admin_chat_id, f"📥 Новый запрос от пользователя {user_id} (@{message.from_user.username}):\nОтветьте ему прямо здесь.")
+        bot.send_message(message.chat.id, "✅ Вы подключены к чату с администрацией. Пишите ваше сообщение.")
+        bot.send_message(admin_chat_id, f"📨 Новый запрос от пользователя @{message.from_user.username or 'Без username'} ({user_id})")
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Проблема: {e}")
+
 
 @bot.message_handler(commands=['stop_admin_chat'])
 def stop_admin_chat(message):
@@ -366,5 +367,4 @@ def stop_admin_chat(message):
     else:
         bot.send_message(message.chat.id, "ℹ️ У вас нет активной сессии.")
 
-# Запуск бота
 bot.polling()
