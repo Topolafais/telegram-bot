@@ -330,69 +330,39 @@ def list_warns(message):
 
 @bot.message_handler(commands=['set_admin_group'])
 def set_admin_group(message):
-    if not is_owner(message.from_user.id):
-        bot.send_message(message.chat.id, "❌ У вас нет доступа.")
-        return
-    if message.chat.type not in ["group", "supergroup"]:
-        bot.send_message(message.chat.id, "⚠️ Эта команда доступна только в группах.")
-        return
-    try:
-        with open(ADMIN_CHAT_FILE, "w", encoding="utf-8") as f:
+    if message.chat.type in ['group', 'supergroup']:
+        with open(ADMIN_CHAT_FILE, "w") as f:
             f.write(str(message.chat.id))
-        bot.send_message(message.chat.id, f"✅ Группа {message.chat.id} назначена как админ-группа.")
-    except Exception as e:
-        bot.send_message(message.chat.id, f"❌ Проблема: {e}")
+        bot.reply_to(message, "✅ Эта группа установлена как группа админов.")
+    else:
+        bot.reply_to(message, "❗ Эту команду нужно использовать в группе, где бот добавлен.")
 
 @bot.message_handler(commands=['contact_admin'])
-def contact_admin(message):
-    global active_user_id
-    user_id = message.from_user.id
-
-    if user_id in user_chat_sessions:
-        bot.send_message(message.chat.id, "ℹ️ Вы уже подключены к администрации.")
+def start_admin_chat(message):
+    try:
+        with open(ADMIN_CHAT_FILE, "r") as f:
+            group_id = int(f.read().strip())
+    except:
+        bot.reply_to(message, "❌ Группа админов не установлена.")
         return
 
-    try:
-        with open(ADMIN_CHAT_FILE, "r", encoding="utf-8") as f:
-            admin_chat_id = int(f.read().strip())
-
-        user_chat_sessions[user_id] = admin_chat_id
-        active_user_id = user_id
-
-        bot.send_message(message.chat.id, "✅ Вы подключены. Пишите сообщение.")
-    except Exception as e:
-        bot.send_message(message.chat.id, f"❌ Проблема: {e}")
-
-@bot.message_handler(func=lambda message: message.from_user.id in user_chat_sessions)
-def forward_user_message(message):
-    global active_user_id
-    try:
-        admin_chat_id = user_chat_sessions[message.from_user.id]
-        active_user_id = message.from_user.id  # обновляем активного пользователя
-        bot.send_message(admin_chat_id, message.text)  # просто текст, без префиксов
-    except Exception as e:
-        bot.send_message(message.chat.id, f"❌ Ошибка при отправке: {e}")
-
-@bot.message_handler(func=lambda message: message.chat.type in ['group', 'supergroup'])
-def admin_to_user(message):
-    global active_user_id
-    if not active_user_id:
-        return
-    try:
-        bot.send_message(active_user_id, message.text)
-    except Exception as e:
-        bot.send_message(message.chat.id, f"❌ Не удалось отправить сообщение пользователю: {e}")
+    user_chat_sessions[message.from_user.id] = group_id
+    bot.send_message(message.chat.id, "📨 Вы начали диалог с админом. Все ваши сообщения будут пересылаться в админскую группу. Напишите /остановить_разговор_с_админом для завершения.")
 
 @bot.message_handler(commands=['stop_admin_chat'])
 def stop_admin_chat(message):
-    global active_user_id
-    user_id = message.from_user.id
-
-    if user_id in user_chat_sessions:
-        del user_chat_sessions[user_id]
-        active_user_id = None
-        bot.send_message(message.chat.id, "✅ Вы завершили диалог с администрацией.")
+    if message.from_user.id in user_chat_sessions:
+        del user_chat_sessions[message.from_user.id]
+        bot.send_message(message.chat.id, "✅ Диалог с админом завершён.")
     else:
         bot.send_message(message.chat.id, "ℹ️ У вас нет активного диалога.")
+
+@bot.message_handler(func=lambda message: message.from_user.id in user_chat_sessions)
+def forward_message_to_admin(message):
+    group_id = user_chat_sessions.get(message.from_user.id)
+    if group_id:
+        user_info = f"@{message.from_user.username}" if message.from_user.username else f"ID: {message.from_user.id}"
+        forward_text = f"✉️ Сообщение от {user_info}:\n{message.text}"
+        bot.send_message(group_id, forward_text)
 
 bot.polling()
