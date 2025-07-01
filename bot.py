@@ -8,6 +8,7 @@ BAN_FILE = "ban_reasons.txt"
 WARN_FILE = "warns.txt"
 ADMIN_CHAT_FILE = "admin_group.txt"
 user_chat_sessions = {}
+active_user_id = None
 
 ROONYA = 599492177
 DARLIN = 1603464587
@@ -344,27 +345,54 @@ def set_admin_group(message):
 
 @bot.message_handler(commands=['contact_admin'])
 def contact_admin(message):
+    global active_user_id
     user_id = message.from_user.id
+
     if user_id in user_chat_sessions:
-        bot.send_message(message.chat.id, "ℹ️ Вы уже на связи с администрацией. Напишите ваше сообщение.")
+        bot.send_message(message.chat.id, "ℹ️ Вы уже подключены к администрации.")
         return
+
     try:
         with open(ADMIN_CHAT_FILE, "r", encoding="utf-8") as f:
             admin_chat_id = int(f.read().strip())
+
         user_chat_sessions[user_id] = admin_chat_id
-        bot.send_message(message.chat.id, "✅ Вы подключены к чату с администрацией. Пишите ваше сообщение.")
-        bot.send_message(admin_chat_id, f"📨 Новый запрос от пользователя @{message.from_user.username or 'Без username'} ({user_id})")
+        active_user_id = user_id
+
+        bot.send_message(message.chat.id, "✅ Вы подключены. Пишите сообщение.")
     except Exception as e:
         bot.send_message(message.chat.id, f"❌ Проблема: {e}")
 
+@bot.message_handler(func=lambda message: message.from_user.id in user_chat_sessions)
+def forward_user_message(message):
+    global active_user_id
+    try:
+        admin_chat_id = user_chat_sessions[message.from_user.id]
+        active_user_id = message.from_user.id  # обновляем активного пользователя
+        bot.send_message(admin_chat_id, message.text)  # просто текст, без префиксов
+    except Exception as e:
+        bot.send_message(message.chat.id, f"❌ Ошибка при отправке: {e}")
+
+@bot.message_handler(func=lambda message: message.chat.type in ['group', 'supergroup'])
+def admin_to_user(message):
+    global active_user_id
+    if not active_user_id:
+        return
+    try:
+        bot.send_message(active_user_id, message.text)
+    except Exception as e:
+        bot.send_message(message.chat.id, f"❌ Не удалось отправить сообщение пользователю: {e}")
 
 @bot.message_handler(commands=['stop_admin_chat'])
 def stop_admin_chat(message):
+    global active_user_id
     user_id = message.from_user.id
+
     if user_id in user_chat_sessions:
         del user_chat_sessions[user_id]
-        bot.send_message(message.chat.id, "✅ Вы завершили общение с администратором.")
+        active_user_id = None
+        bot.send_message(message.chat.id, "✅ Вы завершили диалог с администрацией.")
     else:
-        bot.send_message(message.chat.id, "ℹ️ У вас нет активной сессии.")
+        bot.send_message(message.chat.id, "ℹ️ У вас нет активного диалога.")
 
 bot.polling()
