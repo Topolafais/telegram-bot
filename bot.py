@@ -364,18 +364,35 @@ def forward_message_to_admin(message):
 
     group_id = user_chat_sessions.get(message.from_user.id)
     if group_id:
-        user_info = f"@{message.from_user.username}" if message.from_user.username else f"ID: {message.from_user.id}"
-        forward_text = f"✉️ Сообщение от {user_info}:\n{message.text}"
-        sent_msg = bot.send_message(group_id, forward_text)
-        
+        sent_msg = bot.forward_message(group_id, message.chat.id, message.message_id)
         admin_message_links[sent_msg.message_id] = message.from_user.id
+
+        user_info = f"@{message.from_user.username}" if message.from_user.username else f"ID: {message.from_user.id}"
+        bot.send_message(group_id, f"📨 Сообщение от {user_info}")
 
 @bot.message_handler(func=lambda message: message.chat.type in ['group', 'supergroup'] and message.reply_to_message is not None)
 def reply_from_admin(message):
     original_msg_id = message.reply_to_message.message_id
+    user_id = admin_message_links.get(original_msg_id)
 
-    if original_msg_id in admin_message_links:
-        user_id = admin_message_links[original_msg_id]
-        bot.send_message(user_id, f"📬 Ответ от админа:\n{message.text}")
+    if user_id:
+        try:
+            if message.text:
+                bot.send_message(user_id, f"📬 Ответ от админа:\n{message.text}")
+
+            elif message.photo:
+                caption = message.caption or "📷 Фото от админа"
+                bot.send_photo(user_id, message.photo[-1].file_id, caption=caption)
+
+            elif message.document:
+                caption = message.caption or "📎 Документ от админа"
+                bot.send_document(user_id, message.document.file_id, caption=caption)
+
+            else:
+                bot.send_message(user_id, "⚠️ Админ прислал неподдерживаемый тип сообщения.")
+        except Exception as e:
+            bot.send_message(message.chat.id, f"❌ Ошибка отправки в ЛС: {e}")
+    else:
+        bot.send_message(message.chat.id, "⚠️ Не удалось найти получателя для этого ответа.")
 
 bot.polling()
