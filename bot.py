@@ -8,7 +8,7 @@ BAN_FILE = "ban_reasons.txt"
 WARN_FILE = "warns.txt"
 ADMIN_CHAT_FILE = "admin_group.txt"
 user_chat_sessions = {}
-active_user_id = None
+admin_message_links = {}
 
 ROONYA = 599492177
 DARLIN = 1603464587
@@ -347,7 +347,7 @@ def start_admin_chat(message):
         return
 
     user_chat_sessions[message.from_user.id] = group_id
-    bot.send_message(message.chat.id, "📨 Вы начали диалог с админом. Все ваши сообщения будут пересылаться в админскую группу. Напишите /остановить_разговор_с_админом для завершения.")
+    bot.send_message(message.chat.id, "📨 Вы начали диалог с админом. Все ваши сообщения будут пересылаться в админскую группу. Напишите /stop_admin_chat для завершения.")
 
 @bot.message_handler(commands=['stop_admin_chat'])
 def stop_admin_chat(message):
@@ -359,10 +359,26 @@ def stop_admin_chat(message):
 
 @bot.message_handler(func=lambda message: message.from_user.id in user_chat_sessions)
 def forward_message_to_admin(message):
+    if message.chat.type in ['group', 'supergroup']:
+        return
+
     group_id = user_chat_sessions.get(message.from_user.id)
     if group_id:
         user_info = f"@{message.from_user.username}" if message.from_user.username else f"ID: {message.from_user.id}"
         forward_text = f"✉️ Сообщение от {user_info}:\n{message.text}"
-        bot.send_message(group_id, forward_text)
+        sent_msg = bot.send_message(group_id, forward_text)
+        
+        admin_message_links[sent_msg.message_id] = message.from_user.id
+
+@bot.message_handler(func=lambda message: message.chat.type in ['group', 'supergroup'] and message.reply_to_message is not None)
+def reply_from_admin(message):
+    original_msg_id = message.reply_to_message.message_id
+
+    if original_msg_id in admin_message_links:
+        user_id = admin_message_links[original_msg_id]
+        bot.send_message(user_id, f"📬 Ответ от админа:\n{message.text}")
+
+
+
 
 bot.polling()
